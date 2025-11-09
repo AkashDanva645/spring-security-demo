@@ -3,8 +3,8 @@ package com.example.project2.service.auth;
 
 import com.example.project2.domain.exception.AppException;
 import com.example.project2.dto.request.LoginRequest;
+import com.example.project2.repository.TokenRepo;
 import com.example.project2.repository.UserDao;
-import com.example.project2.security.service.JwtTokenDecoder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,7 +29,7 @@ public class AuthService {
     private JwtTokenGenerator jwtTokenGenerator;
 
     @Autowired
-    private JwtTokenDecoder jwtTokenDecoder;
+    private TokenRepo tokenRepo;
 
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final Base64.Encoder base64Encoder = Base64.getUrlEncoder().withoutPadding();
@@ -54,6 +54,8 @@ public class AuthService {
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        tokenRepo.saveToken(refreshToken, user.getUsername());
         return accessToken;
     }
 
@@ -71,7 +73,7 @@ public class AuthService {
             throw new AccessDeniedException("Invalid Token. Please Login Again");
         }
 
-        String username = jwtTokenDecoder.getUsernameFromToken(refreshTokenCookie.getValue());
+        String username = tokenRepo.getUsername(refreshTokenCookie.getValue());
 
         UserDetails user = userDao.fetchByUsername(username);
         if (user == null) {
@@ -88,6 +90,7 @@ public class AuthService {
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        tokenRepo.saveToken(refreshToken, user.getUsername());
         return accessToken;
     }
 
